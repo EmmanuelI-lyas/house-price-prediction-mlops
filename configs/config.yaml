@@ -1,0 +1,43 @@
+project:
+  name: house-price-mlops
+  version: 1.0.0
+
+data:
+  train_path: data/processed/train_split.csv
+  validation_path: data/processed/valid_split.csv
+  test_path: data/raw/test.csv
+  target: SalePrice
+
+split:
+  test_size: 0.20
+  random_state: 42
+
+model:
+  models:
+    - linear_regression
+    - ridge
+    - lasso
+    - decision_tree
+    - random_forest
+    - extra_trees
+    - gradient_boosting
+
+training:
+  hyperparameter_search: true
+  n_iter: 4          # Development: 5 | Production: 20
+  cv: 3              # Development: 3 | Production: 5
+
+tuned_models:
+  - random_forest
+  - extra_trees
+  - gradient_boosting
+
+random_forest:
+  n_estimators: 300
+  max_depth: 15
+  random_state: 42
+
+output:
+  model_dir: models/
+  pipeline_name: house_pipeline.pkl
+  metrics_name: metrics.json

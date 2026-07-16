@@ -1,0 +1,34 @@
+# Core Data Science
+pandas
+numpy
+
+# Visualization (EDA)
+matplotlib
+seaborn
+
+# Machine Learning
+scikit-learn
+feature-engine
+joblib
+
+
+# API
+fastapi
+uvicorn[standard]
+pydantic
+
+# Configuration
+PyYAML
+Mangum
+pillow==10.4.0
+
+
+# AWS
+boto3
+
+# Testing
+pytest
+httpx
+
+# Utilities
+python-dotenv
