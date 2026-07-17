@@ -73,7 +73,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          
 
       ##################################################
       # Verify Dataset Exists
@@ -102,6 +102,22 @@ jobs:
       - name: Split Dataset
         run: |
           python -m src.train_split
+      - name: Debug Runner
+        run: |
+          echo "===== Repository Files ====="
+          find . -type f | sort
+
+          echo ""
+          echo "===== Requirements ====="
+          cat requirements.txt
+
+          echo ""
+          echo "===== Installed Requests ====="
+          pip show requests || echo "requests NOT installed"
+
+          echo ""
+          echo "===== Test Files ====="
+          find . -name "test*.py"
 
       ##################################################
       # Run Tests
