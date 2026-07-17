@@ -21,6 +21,8 @@ pydantic
 PyYAML
 Mangum
 pillow==10.4.0
+requests
+
 
 
 # AWS
