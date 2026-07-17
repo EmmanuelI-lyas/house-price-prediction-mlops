@@ -118,12 +118,14 @@ jobs:
           echo ""
           echo "===== Test Files ====="
           find . -name "test*.py"
-
+      
       ##################################################
       # Run Tests
       ##################################################
 
       - name: Run Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest
 
