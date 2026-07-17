@@ -151,6 +151,7 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build \
+            -f Dockerfile.lambda \
             -t $ECR_REPOSITORY:${{ github.sha }} .
 
       ##################################################
