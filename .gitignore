@@ -44,8 +44,6 @@ dist/
 # -------------------------
 data/raw/
 data/interim/
-
-# Ignore processed splits if they can be regenerated
 data/processed/
 
 # -------------------------
@@ -54,5 +52,12 @@ data/processed/
 models/model_summary.csv
 models/metrics.json
 
-# Ignore trained model
-models/*.pkl
+# ------------------------------------------------
+# IMPORTANT
+# ------------------------------------------------
+# Do NOT ignore the trained pipeline.
+# The API, Docker image and Lambda deployment
+# require models/house_pipeline.pkl.
+#
+# Remove the following line:
+# models/*.pkl

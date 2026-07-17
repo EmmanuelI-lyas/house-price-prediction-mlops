@@ -1,0 +1,197 @@
+name: House Price CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+  repository_dispatch:
+    types:
+      - retrain
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: house-price-api
+  LAMBDA_FUNCTION: house-price-api
+  S3_BUCKET: house-price-data-582260130420
+  DOCKER_BUILDKIT: 1
+
+jobs:
+
+  train-test-deploy:
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    steps:
+
+      ##################################################
+      # Checkout Repository
+      ##################################################
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      ##################################################
+      # Python
+      ##################################################
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      ##################################################
+      # Docker Buildx
+      ##################################################
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      ##################################################
+      # AWS Credentials
+      ##################################################
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      ##################################################
+      # Install Dependencies
+      ##################################################
+
+      - name: Install Requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      ##################################################
+      # Verify Dataset Exists
+      ##################################################
+
+      - name: Verify Dataset
+        run: |
+          aws s3 ls s3://${{ env.S3_BUCKET }}/train.csv
+
+      ##################################################
+      # Download Dataset
+      ##################################################
+
+      - name: Download Dataset
+        run: |
+          mkdir -p data/raw
+
+          aws s3 cp \
+            s3://${{ env.S3_BUCKET }}/train.csv \
+            data/raw/train.csv
+
+      ##################################################
+      # Train / Validation Split
+      ##################################################
+
+      - name: Split Dataset
+        run: |
+          python -m src.train_split
+
+      ##################################################
+      # Run Tests
+      ##################################################
+
+      - name: Run Tests
+        run: |
+          pytest
+
+      ##################################################
+      # Retrain Model
+      ##################################################
+
+      - name: Train Model
+        run: |
+          python -m src.train
+
+      ##################################################
+      # Login To Amazon ECR
+      ##################################################
+
+      - name: Login To Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      ##################################################
+      # Build Docker Image
+      ##################################################
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t $ECR_REPOSITORY:${{ github.sha }} .
+
+      ##################################################
+      # Tag Docker Images
+      ##################################################
+
+      - name: Tag Docker Images
+        run: |
+
+          docker tag \
+          $ECR_REPOSITORY:${{ github.sha }} \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:${{ github.sha }}
+
+          docker tag \
+          $ECR_REPOSITORY:${{ github.sha }} \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:latest
+
+      ##################################################
+      # Push Docker Images
+      ##################################################
+
+      - name: Push Docker Images
+        run: |
+
+          docker push \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:${{ github.sha }}
+
+          docker push \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:latest
+
+      ##################################################
+      # Deploy Latest Image To Lambda
+      ##################################################
+
+      - name: Update Lambda
+        run: |
+
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION \
+            --image-uri \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:latest
+
+      ##################################################
+      # Wait Until Deployment Completes
+      ##################################################
+
+      - name: Wait For Lambda Update
+        run: |
+
+          aws lambda wait function-updated \
+            --function-name $LAMBDA_FUNCTION
+
+      ##################################################
+      # Smoke Test
+      ##################################################
+
+      - name: Smoke Test Lambda
+        run: |
+
+          curl \
+            --fail \
+            ${{ secrets.LAMBDA_URL }}/health

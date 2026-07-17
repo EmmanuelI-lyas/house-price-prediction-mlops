@@ -3,7 +3,8 @@ project:
   version: 1.0.0
 
 data:
-  train_path: data/processed/train_split.csv
+  train_path: data/raw/train.csv
+  train_split_path: data/processed/train_split.csv
   validation_path: data/processed/valid_split.csv
   test_path: data/raw/test.csv
   target: SalePrice
@@ -24,8 +25,8 @@ model:
 
 training:
   hyperparameter_search: true
-  n_iter: 4          # Development: 5 | Production: 20
-  cv: 3              # Development: 3 | Production: 5
+  n_iter: 5
+  cv: 3
 
 tuned_models:
   - random_forest
